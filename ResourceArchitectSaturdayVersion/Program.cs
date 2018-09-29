@@ -9,6 +9,12 @@ using System.Threading.Tasks;
 
 namespace ResourceArchitectSaturdayVersion
 {
+    enum Language
+    {
+        Fra,
+        Ger,
+        Que
+    }
     class Program
     {
         static void Main(string[] args)
@@ -57,7 +63,94 @@ namespace ResourceArchitectSaturdayVersion
                 }
             }
 
-            Console.WriteLine();
+            foreach (var lang in Enum.GetValues(typeof(Language)).Cast<Language>())
+            {
+                M(kvps, lang);
+            }
+
+            Console.WriteLine("Finished");
+        }
+
+        static void M(IEnumerable<KeyValuePair> kvps, Language language)
+        {
+            foreach (var kvp in kvps)
+            {
+                var fileName = GetFileName(language, kvp.OriginalResFileName);
+
+                var entries = new List<DictionaryEntry>();
+
+                using (var resourceReader = new ResXResourceReader(fileName))
+                {
+                    entries = resourceReader.Cast<DictionaryEntry>().ToList();
+                    var existingResource = entries.Where(r => r.Key.ToString() == kvp.Key).FirstOrDefault();
+                    var kvpValue = GetValue(kvp, language);
+                    if (existingResource.Key == null && existingResource.Value == null)
+                    {
+                        entries.Add(new DictionaryEntry() { Key = kvp.Key, Value = GetValue(kvp, language) });
+                    }
+                    //else if(existingResource.Value.ToString()!=kvpValue)
+                    //{
+                    //    var modifiedResx = new DictionaryEntry() { Key = existingResource.Key, Value = kvpValue };
+                    //    entries.Remove(existingResource);
+                    //    entries.Add(modifiedResx);
+                    //}
+                }
+
+                using (var writer = new ResXResourceWriter(fileName))
+                {
+                    entries.ForEach(r =>
+                    {
+                        writer.AddResource(r.Key.ToString(), r.Value.ToString());
+                    });
+                    writer.Generate();
+                }
+            }
+        }
+
+        static string GetFileName(Language language, string original)
+        {
+            string res = "";
+            switch (language)
+            {
+                case Language.Fra:
+                    res = original.Replace(".resx", ".fr-FR.resx");
+                    break;
+                case Language.Ger:
+                    res = original.Replace(".resx", ".de.resx");
+                    break;
+                case Language.Que:
+                    res = original.Replace(".resx", ".fr-CA.resx");
+                    break;                   
+            }
+
+            if (string.IsNullOrEmpty(res))
+            {
+                throw new ArgumentException();
+            }
+            return res;
+        }
+
+        static string GetValue(KeyValuePair kvp, Language language)
+        {
+
+            string res = "";
+            switch (language)
+            {
+                case Language.Fra:
+                    res = kvp.FraValue;
+                    break;
+                case Language.Ger:
+                    res = kvp.GerValue;
+                    break;
+                case Language.Que:
+                    res = kvp.QueValue;
+                    break;
+            }
+            if (string.IsNullOrEmpty(res))
+            {
+                throw new ArgumentException();
+            }
+            return res;
         }
     }
 }
